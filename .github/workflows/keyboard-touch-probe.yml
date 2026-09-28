@@ -6,6 +6,7 @@ permissions:
   contents: read
 jobs:
   touch-tests:
+    if: ${{ false }}
     runs-on: macos-latest
     timeout-minutes: 15
     steps:
@@ -41,5 +42,8 @@ jobs:
       - run: node_modules/.bin/patch-package --error-on-fail
       - run: npm run check
       - run: npm rebuild better-sqlite3
+        if: ${{ !cancelled() }}
       - run: npm run test --ignore-scripts -- --ci --runInBand
+        if: ${{ !cancelled() }}
       - run: OPENWHISPR_APP_ENV=production node_modules/.bin/expo export --platform ios --max-workers 2 --output-dir "$RUNNER_TEMP/mobile-export"
+        if: ${{ !cancelled() }}

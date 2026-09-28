@@ -20,3 +20,26 @@ jobs:
           xcrun simctl help bootstatus
       - name: Run production keyboard UIKit tests
         run: python3 openwhispr-mobile/plugins/keyboard-extension/tests/run-keyboard-touch-tests.py
+  mobile-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      EXPO_NO_DOTENV: "1"
+      SENTRY_DISABLE_AUTO_UPLOAD: "true"
+    defaults:
+      run:
+        working-directory: openwhispr-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: openwhispr-mobile/.nvmrc
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: node_modules/.bin/patch-package --error-on-fail
+      - run: npm run check
+      - run: npm rebuild better-sqlite3
+      - run: npm run test --ignore-scripts -- --ci --runInBand
+      - run: OPENWHISPR_APP_ENV=production node_modules/.bin/expo export --platform ios --max-workers 2 --output-dir "$RUNNER_TEMP/mobile-export"

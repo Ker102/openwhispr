@@ -1,0 +1,22 @@
+name: Keyboard touch probe
+on:
+  push:
+    branches: [fix/ios-keyboard-touch-gaps]
+permissions:
+  contents: read
+jobs:
+  touch-tests:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Inspect native tool help
+        run: |
+          xcrun swiftc -help | head -80
+          xcrun simctl help list
+          xcrun simctl help spawn
+          xcrun simctl help bootstatus
+      - name: Run production keyboard UIKit tests
+        run: python3 openwhispr-mobile/plugins/keyboard-extension/tests/run-keyboard-touch-tests.py

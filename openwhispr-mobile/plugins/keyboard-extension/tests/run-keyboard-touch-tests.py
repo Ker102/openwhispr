@@ -1,4 +1,4 @@
-"""Compile the production keyboard and exercise UIKit hit testing in a simulator."""
+"""Compile the production keyboard for Mac Catalyst and exercise its UIKit hit testing."""
 
 import json
 from pathlib import Path
@@ -6,54 +6,36 @@ import platform
 import subprocess
 import tempfile
 
-
-def output(*args):
-    return subprocess.check_output(args, text=True).strip()
+# Matches IPHONEOS_DEPLOYMENT_TARGET in withKeyboardExtension.js.
+DEPLOYMENT_TARGET = "15.1"
 
 
 def main():
     if platform.system() != "Darwin":
-        raise SystemExit("Keyboard UIKit tests require macOS, Xcode, and an iOS Simulator.")
+        raise SystemExit("Keyboard UIKit tests require macOS and Xcode.")
 
     plugin = Path(__file__).resolve().parents[1]
-    devices = json.loads(output("xcrun", "simctl", "list", "devices", "available", "--json"))
-    iphones = [
-        device
-        for runtime, runtime_devices in devices["devices"].items()
-        if ".iOS-" in runtime
-        for device in runtime_devices
-        if device["isAvailable"] and device["name"].startswith("iPhone")
-    ]
-    if not iphones:
-        raise SystemExit("No available iPhone Simulator. Install an iOS runtime in Xcode.")
-
-    device = next((item for item in iphones if item["state"] == "Booted"), iphones[-1])
-    udid = device["udid"]
-    booted_here = device["state"] != "Booted"
-    if booted_here:
-        subprocess.run(["xcrun", "simctl", "boot", udid], check=True)
-
-    try:
-        subprocess.run(["xcrun", "simctl", "bootstatus", udid, "-b"], check=True)
-        sdk = output("xcrun", "--sdk", "iphonesimulator", "--show-sdk-path")
-        architecture = platform.machine()
-        with tempfile.TemporaryDirectory(prefix="keyboard-touch-") as directory:
-            source = Path(directory) / "KeyboardTouchTests.swift"
-            source.write_text(
-                (plugin / "ios/KeyboardViewController.swift").read_text()
-                + "\n"
-                + (plugin / "tests/KeyboardTouchTests.swift").read_text()
-            )
-            executable = str(Path(directory) / "keyboard-touch-tests")
-            subprocess.run([
-                "xcrun", "swiftc", "-swift-version", "5", "-parse-as-library",
-                "-sdk", sdk, "-target", f"{architecture}-apple-ios18.0-simulator",
-                str(source), "-o", executable,
-            ], check=True)
-            subprocess.run(["xcrun", "simctl", "spawn", udid, executable], check=True)
-    finally:
-        if booted_here:
-            subprocess.run(["xcrun", "simctl", "shutdown", udid], check=True)
+    tests = plugin / "tests/KeyboardTouchTests.swift"
+    sdk = subprocess.check_output(
+        ["xcrun", "--sdk", "macosx", "--show-sdk-path"], text=True
+    ).strip()
+    with tempfile.TemporaryDirectory(prefix="keyboard-touch-") as directory:
+        source = Path(directory) / "keyboard-with-touch-tests.swift"
+        # #sourceLocation keeps compiler errors and traps pointing at the test file.
+        source.write_text(
+            (plugin / "ios/KeyboardViewController.swift").read_text()
+            + f"\n#sourceLocation(file: {json.dumps(str(tests))}, line: 1)\n"
+            + tests.read_text()
+        )
+        executable = str(Path(directory) / "keyboard-touch-tests")
+        subprocess.run([
+            "xcrun", "--sdk", "macosx", "swiftc", "-swift-version", "5", "-parse-as-library",
+            "-sdk", sdk,
+            "-target", f"{platform.machine()}-apple-ios{DEPLOYMENT_TARGET}-macabi",
+            "-Fsystem", f"{sdk}/System/iOSSupport/System/Library/Frameworks",
+            str(source), "-o", executable,
+        ], check=True)
+        subprocess.run([executable], check=True)
 
 
 if __name__ == "__main__":

@@ -47,19 +47,21 @@ npm run ios
 
 ## Keyboard touch regression tests
 
-On macOS with Xcode and an installed iOS Simulator runtime:
+On macOS with Xcode:
 
 ```bash
 python3 openwhispr-mobile/plugins/keyboard-extension/tests/run-keyboard-touch-tests.py
 ```
 
-Run from the repository root. The runner compiles the production keyboard Swift
-source and tests UIKit hit routing across row gaps, overlapping key targets,
-nested stacks, hidden layouts, disabled keys, and keyboard boundaries. It uses an
-available iPhone Simulator and shuts it down only if the runner booted it.
-Mobile CI runs the same tests. No Apple signing credentials or Expo build are needed.
+Run from the repository root before changing the keyboard rows or key targets.
+The runner compiles the production keyboard Swift source for Mac Catalyst, so it
+needs no simulator, signing credentials or Expo build. It
+tests UIKit hit routing across row gaps, overlapping key targets, unequal key
+widths, nested stacks, hidden layouts, disabled keys and keyboard boundaries,
+then lays out the real keyboard at several widths in letters and numbers mode
+and checks that no tap inside the rows is dropped. Mobile CI does not run it.
 
-These synthetic touch tests do not measure typing latency. Before releasing,
+These touch tests do not measure typing latency. Before releasing,
 check fast two-thumb typing and repeated letters on an iPhone, near-edge taps,
 Shift, 123/ABC, space/return, held delete, keyboard switching, and dictation in
 portrait and landscape in Notes and another host app.

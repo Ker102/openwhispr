@@ -102,10 +102,10 @@ private final class KeyButton: UIButton {
 /// Route through row/stack boundaries so a key's enlarged target also works in
 /// the gaps between rows. UIKit's default hit testing stops at a parent whose
 /// bounds do not contain the touch, before consulting the key's point(inside:).
+/// Touches no key claims keep UIKit's default target.
 private final class KeyboardRowsStack: UIStackView {
   override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-    guard !isHidden, isUserInteractionEnabled, alpha >= 0.01,
-          self.point(inside: point, with: event) else { return nil }
+    guard let defaultTarget = super.hitTest(point, with: event) else { return nil }
 
     var nearest: KeyButton?
     var nearestDistance = CGFloat.infinity
@@ -139,7 +139,7 @@ private final class KeyboardRowsStack: UIStackView {
     }
 
     subviews.forEach(visit)
-    return nearest ?? self
+    return nearest ?? defaultTarget
   }
 }
 
@@ -2107,6 +2107,13 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
       rowStack.addArrangedSubview(button)
     }
 
+    // Like the system keyboard, an inset row's end keys take taps in the inset.
+    if let first = rowStack.arrangedSubviews.first as? KeyButton,
+       let last = rowStack.arrangedSubviews.last as? KeyButton {
+      first.hitTestOutsets.left += inset
+      last.hitTestOutsets.right += inset
+    }
+
     return rowContainer
   }
 
@@ -2266,7 +2273,10 @@ final class KeyboardViewController: UIInputViewController, UIGestureRecognizerDe
       nextKeyboardButton.topAnchor.constraint(equalTo: rowContainer.topAnchor),
       nextKeyboardButton.bottomAnchor.constraint(equalTo: rowContainer.bottomAnchor),
 
-      modeButton.leadingAnchor.constraint(equalTo: nextKeyboardButton.trailingAnchor, constant: metrics.keySpacing),
+      modeButton.leadingAnchor.constraint(
+        equalTo: nextKeyboardButton.trailingAnchor,
+        constant: needsInputModeSwitchKey ? metrics.keySpacing : 0
+      ),
       modeButton.topAnchor.constraint(equalTo: rowContainer.topAnchor),
       modeButton.bottomAnchor.constraint(equalTo: rowContainer.bottomAnchor),
 

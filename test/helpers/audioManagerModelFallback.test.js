@@ -221,8 +221,8 @@ test("batch HTTP failover uses the correct endpoint, model and saved key and cle
   assert.equal(result.rawText, "hello world");
   assert.equal(cleanupCalls, 1);
   assert.equal(requests.length, 2);
-  assert.match(requests[0].url, /^https:\/\/api.openai.com\//);
-  assert.match(requests[1].url, /^https:\/\/api.groq.com\//);
+  assert.equal(new URL(requests[0].url).origin, "https://api.openai.com");
+  assert.equal(new URL(requests[1].url).origin, "https://api.groq.com");
   assert.equal(requests[0].key, "Bearer openai-test-key");
   assert.equal(requests[1].key, "Bearer groq-test-key");
   assert.equal(requests[1].model, "whisper-large-v3-turbo");

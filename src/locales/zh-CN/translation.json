@@ -179,7 +179,8 @@
     "recommended": "推荐",
     "active": "已激活",
     "managedByOrg": "由您的组织管理",
-    "freeAccountRequired": "需要免费账户",
+    "signInRequired": "需要登录",
+    "signIn": "登录",
     "comingSoon": "即将推出",
     "cloud": "云端",
     "local": "本地",
@@ -1571,7 +1572,10 @@
         "opening": "正在打开...",
         "updatePaymentMethod": "更新支付方式",
         "contactOwnerTitle": "请联系工作区所有者",
-        "contactOwnerDescription": "只有工作区所有者才能更新该工作区的账单。"
+        "contactOwnerDescription": "只有工作区所有者才能更新该工作区的账单。",
+        "manageInAppStore": "在 App Store 中管理",
+        "manageInGooglePlay": "在 Google Play 中管理",
+        "managedInMobileStore": "通过手机应用商店计费。请在手机上管理订阅。"
       },
       "checkout": {
         "couldNotOpenDescription": "打开结账页面时出错，请重试。",
@@ -1595,7 +1599,9 @@
         "nextBilling": "下次扣费：{{date}}",
         "pastDue": "本周 {{used}} / {{limit}} 免费词数——更新支付方式以恢复 Pro",
         "trial": "剩余 {{days}} 天——无限转录",
-        "unlimited": "无限制"
+        "unlimited": "无限制",
+        "accessUntil": "可使用至 {{date}}",
+        "storePaymentIssue": "应用商店未能续订此订阅。请在应用商店中更新付款方式以继续使用当前套餐。"
       },
       "planLabels": {
         "free": "免费版",
@@ -2329,7 +2335,8 @@
           }
         }
       },
-      "meetingEnterpriseOnly": "贵组织仅允许企业云转录，暂不支持会议录音。"
+      "meetingEnterpriseOnly": "贵组织仅允许企业云转录，暂不支持会议录音。",
+      "meetingCloudSignedOut": "未登录时，无法使用 OpenWhispr Cloud 开始笔记录音。请在上方选择其他引擎。"
     },
     "intelligence": {
       "gpuDevice": {
@@ -3135,6 +3142,8 @@
       "unsupportedSelfHosted": "笔记录音暂不支持自托管端点。请打开设置，选择本地或支持流式传输的服务商。",
       "unsupportedProvider": "笔记录音无法使用 {{provider}} 进行实时转录。请打开设置，选择本地或支持流式传输的服务商。",
       "noProviderSelected": "尚未为笔记录音选择服务商。请打开设置，选择本地或支持流式传输的服务商。",
+      "signInRequired": "笔记录音需要登录，请先登录。",
+      "signInExpired": "登录已过期，笔记录音无法更新连接，可能会中断。请在本次录音结束后重新登录。",
       "systemAudioSilent": {
         "title": "尚未检测到会议音频",
         "description": "到目前为止，只有您的麦克风采集到声音。正在进行视频通话？请检查会议音频是否正在此电脑上播放且未被静音。正在进行现场录音？您可以忽略此提示——您的麦克风会采集房间内的声音。"

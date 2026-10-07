@@ -1030,6 +1030,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("hotkey-registration-failed", listener);
     return () => ipcRenderer.removeListener("hotkey-registration-failed", listener);
   },
+  onApiKeyUpdated: registerListener(
+    "api-key-updated",
+    (callback) => (_event, storeKey) => callback(storeKey)
+  ),
   onSettingUpdated: (callback) => {
     const listener = (_event, data) => callback?.(data);
     ipcRenderer.on("setting-updated", listener);

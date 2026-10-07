@@ -24,7 +24,7 @@ def main():
         # #sourceLocation keeps compiler errors and traps pointing at the test file.
         source.write_text(
             (plugin / "ios/KeyboardViewController.swift").read_text()
-            + f"\n#sourceLocation(file: {json.dumps(str(tests))}, line: 1)\n"
+            + f"\n#sourceLocation(file: {json.dumps(str(tests), ensure_ascii=False)}, line: 1)\n"
             + tests.read_text()
         )
         executable = str(Path(directory) / "keyboard-touch-tests")

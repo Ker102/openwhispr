@@ -34,8 +34,11 @@ private extension KeyboardViewController {
     return controller
   }
 
-  var touchTestRows: UIStackView { keyboardRowsStack }
+  var touchTestRows: KeyboardRowsStack { keyboardRowsStack }
   var touchTestRowHeight: CGFloat { metrics.rowHeight }
+  var touchTestPadding: (side: CGFloat, bottom: CGFloat) {
+    (metrics.rootHorizontalPadding, metrics.rootBottomPadding)
+  }
 }
 
 private struct TouchChecks {
@@ -218,8 +221,9 @@ private enum KeyboardTouchTests {
     checks.expect("dead point keeps UIKit's target", stack, CGPoint(x: 50, y: 20), row)
   }
 
-  /// Sweeps every point of the real rows: no tap is dropped, every key keeps its
-  /// own face, and a tap just outside a key never goes to a farther key.
+  /// Sweeps the real keyboard below the dictation strip, padding included: no tap
+  /// is dropped, every key keeps its own face, and a tap just outside a key never
+  /// goes to a farther key.
   @MainActor
   static func checkProductionLayout(
     width: CGFloat,
@@ -278,20 +282,36 @@ private enum KeyboardTouchTests {
     checks.check("\(layout): every key keeps its own face (\(wrongFace) wrong)", wrongFace == 0)
     checks.check("\(layout): no tap beside a key goes to a farther key (\(fartherKey))", fartherKey == 0)
 
+    // Hit-test from the root view, so a touch in the keyboard's padding has to get
+    // through every ancestor. Half-point steps across catch the pixel-rounding
+    // slivers between equal-width keys; row heights and gaps are whole points.
+    let root = controller.view!
+    let strip = (rows.superview as! UIStackView).arrangedSubviews[0]
+    let padding = controller.touchTestPadding
+    checks.check(
+      "\(layout): rows keep the keyboard's padding",
+      rows.frame.minX == padding.side && root.bounds.maxX - rows.frame.maxX == padding.side
+        && root.bounds.maxY - rows.frame.maxY == padding.bottom
+    )
+    let top = (strip.frame.maxY + rows.frame.minY) / 2
+    let visibleKeys = Set(keys.map(ObjectIdentifier.init))
     var dropped = 0
     var hiddenHits = 0
-    for y in stride(from: 0, to: rows.bounds.height, by: 1) {
-      for x in stride(from: 0, to: rows.bounds.width, by: 1) {
-        guard let hit = rows.hitTest(CGPoint(x: x, y: y), with: nil) as? KeyButton else {
+    for y in stride(from: top, to: root.bounds.height, by: 1) {
+      for x in stride(from: 0, to: root.bounds.width, by: 0.5) {
+        guard let hit = root.hitTest(CGPoint(x: x, y: y), with: nil) as? KeyButton else {
           dropped += 1
           continue
         }
-        if !keys.contains(where: { $0 === hit }) {
+        if !visibleKeys.contains(ObjectIdentifier(hit)) {
           hiddenHits += 1
         }
       }
     }
-    checks.check("\(layout): no tap inside the rows is dropped (\(dropped))", dropped == 0)
+    checks.check("\(layout): no tap below the dictation strip is dropped (\(dropped))", dropped == 0)
     checks.check("\(layout): no tap reaches a hidden key (\(hiddenHits))", hiddenHits == 0)
+
+    let stripHalf = CGPoint(x: root.bounds.midX, y: top - 0.5)
+    checks.check("\(layout): the strip's half of the gap takes no key taps", !(root.hitTest(stripHalf, with: nil) is KeyButton))
   }
 }

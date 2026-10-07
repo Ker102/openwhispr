@@ -1,3 +1,14 @@
+import { PROVIDER_ERROR_CODES } from "./providerHttpErrors.js";
+
+const knownProviderCodes = new Set<string>(Object.values(PROVIDER_ERROR_CODES));
+const recoverableProviderCodes = new Set<string>([
+  PROVIDER_ERROR_CODES.QUOTA_EXHAUSTED,
+  PROVIDER_ERROR_CODES.RATE_LIMITED,
+  PROVIDER_ERROR_CODES.UNAVAILABLE,
+  PROVIDER_ERROR_CODES.TIMEOUT,
+  PROVIDER_ERROR_CODES.UNREACHABLE,
+]);
+
 /** Stored selections only. Credentials stay in encrypted provider slots and named key profiles. */
 export interface FallbackTarget {
   provider: string;
@@ -46,6 +57,12 @@ export function canFallback(error: unknown): boolean {
   if (fault.name === "AbortError" || fault.selectionEditFatal) return false;
   if (/POLICY|AUTH|INVALID_KEY|API_KEY_MISSING|CONTENT_FILTER|SAFETY|CANCEL/.test(fault.code ?? ""))
     return false;
+  // Main classifies some quota failures from HTTP 400/403, and gives network
+  // failures a safe message instead of the browser's raw fetch error. Use that
+  // classification before the generic HTTP/message checks below.
+  if (fault.code && knownProviderCodes.has(fault.code)) {
+    return recoverableProviderCodes.has(fault.code);
+  }
   const status = fault.status ?? fault.response?.status;
   if (typeof status === "number" && status > 0) {
     return status === 402 || status === 408 || status === 429 || (status >= 500 && status < 600);

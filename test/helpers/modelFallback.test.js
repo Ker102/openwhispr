@@ -1,6 +1,47 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
+test("model fallback respects upstream's classified provider failures", () => {
+  const { canFallback } = require("../../src/helpers/modelFallback.ts");
+  const {
+    PROVIDER_ERROR_CODES: codes,
+    providerError,
+    providerHttpError,
+    asProviderError,
+  } = require("../../src/helpers/providerHttpErrors.js");
+  const context = { provider: "OpenRouter", surface: "llm" };
+  for (const status of [400, 403, 429]) {
+    assert.equal(
+      canFallback(providerHttpError({ ...context, status, body: "insufficient_quota" })),
+      true,
+      `classified quota with HTTP ${status}`
+    );
+  }
+  for (const code of [
+    codes.QUOTA_EXHAUSTED,
+    codes.RATE_LIMITED,
+    codes.UNAVAILABLE,
+    codes.TIMEOUT,
+  ]) {
+    assert.equal(canFallback(providerError(code, context)), true, code);
+  }
+  assert.equal(canFallback(asProviderError(new TypeError("fetch failed"), context)), true);
+  // Online Chromium's ambiguous "Failed to fetch" can also hide a bad key.
+  assert.equal(canFallback(asProviderError(new TypeError("Failed to fetch"), context)), false);
+  for (const code of [
+    codes.AUTH_FAILED,
+    codes.ACCESS_DENIED,
+    codes.KEY_MISSING,
+    codes.MODEL_NOT_FOUND,
+    codes.PAYLOAD_TOO_LARGE,
+    codes.BAD_REQUEST,
+    codes.NO_RESPONSE,
+    codes.ERROR,
+  ]) {
+    assert.equal(canFallback(providerError(code, context)), false, code);
+  }
+});
+
 test("model fallback classifies transport failures conservatively", async () => {
   const { canFallback } = require("../../src/helpers/modelFallback.ts");
   for (const status of [402, 408, 429, 500, 503]) {

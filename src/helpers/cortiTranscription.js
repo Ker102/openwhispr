@@ -2,6 +2,7 @@ const { net } = require("electron");
 const crypto = require("crypto");
 const debugLogger = require("./debugLogger");
 const { getCortiToken } = require("./cortiAuth");
+const { providerHttpError, redactProviderBody } = require("./providerHttpErrors");
 
 async function request(token, tenant, url, options = {}) {
   const response = await net.fetch(url, {
@@ -14,8 +15,16 @@ async function request(token, tenant, url, options = {}) {
   });
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    throw Object.assign(new Error(`Corti API Error: ${response.status} ${errorText}`.trim()), {
+    debugLogger.warn("Corti transcription failed", {
       status: response.status,
+      body: redactProviderBody(errorText),
+    });
+    throw providerHttpError({
+      provider: "Corti",
+      status: response.status,
+      body: errorText,
+      headers: response.headers,
+      surface: "transcription",
     });
   }
   return response;
@@ -36,7 +45,21 @@ async function transcribeAudio({
   audioBuffer,
   language,
 }) {
-  const token = await getCortiToken({ environment, tenant, clientId, clientSecret });
+  const token = await getCortiToken({ environment, tenant, clientId, clientSecret }).catch(
+    (error) => {
+      if (typeof error.status !== "number") throw error;
+      debugLogger.warn("Corti authentication failed", {
+        status: error.status,
+        body: redactProviderBody(error.message),
+      });
+      throw providerHttpError({
+        provider: "Corti",
+        status: error.status,
+        body: error.message,
+        surface: "transcription",
+      });
+    }
+  );
   const base = `https://api.${environment}.corti.app/v2`;
 
   debugLogger.debug(
